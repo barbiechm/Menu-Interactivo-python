@@ -1,22 +1,30 @@
 # main.py
-import tkinter as tk
-from tkinter import ttk, messagebox
-from datos import menu, selector_de_precios
+# Este es el archivo principal de nuestro programa
 
+# Importamos las librerías que necesitamos
+import tkinter as tk  # Para crear ventanas y botones
+from tkinter import messagebox  # Para mostrar mensajes emergentes
+from datos import menu, selector_de_precios  # Importamos el menú desde datos.py
+
+
+# Esta es nuestra aplicación principal
 class RestauranteApp:
+    
     def __init__(self, root):
         """
-        Constructor de la clase.
-        Se ejecuta automáticamente al crear la aplicación.
-        'self' es como 'this' en otros lenguajes.
+        Esta función se ejecuta automáticamente cuando arranca el programa.
+        Aquí preparamos todo lo necesario.
         """
-        self.root = root
-        self.root.title("🍽️ Menú Digital - Restaurante")
-        self.root.geometry("900x700")
-        self.root.configure(bg='#f5f5f5')
+        self.root = root  # Guardamos la ventana principal
+        self.root.title("Menú Digital - Restaurante")  # Título de la ventana
+        self.root.geometry("800x600")  # Tamaño: 800 pixeles ancho x 600 alto
+        self.root.configure(bg='#f0f0f0')  # Color de fondo gris claro
         
-        # Diccionario para almacenar el pedido actual
-        # Estructura: {"bebidas": ["Café Americano"], "almuerzos": ["Pasta Carbonara"]}
+        # Variable para guardar el nombre del cliente
+        self.nombre_cliente = ""
+        
+        # Diccionario (como una lista organizada) para guardar el pedido
+        # Ejemplo: {"bebidas": ["Café"], "almuerzos": ["Pasta"]}
         self.pedido = {
             "bebidas": [],
             "desayunos": [],
@@ -24,312 +32,527 @@ class RestauranteApp:
             "acompanantes": []
         }
         
-        self.crear_interfaz()
+        # Primero pedimos el nombre
+        self.pedir_nombre()
     
-    def crear_interfaz(self):
-        """Crea todos los elementos visuales de la ventana"""
+    
+    def pedir_nombre(self):
+        """
+        Esta función crea una ventana pequeña para pedir el nombre del cliente.
+        """
+        # Crear una ventana nueva (pequeña y centrada)
+        ventana_nombre = tk.Toplevel(self.root)
+        ventana_nombre.title("Bienvenido")
+        ventana_nombre.geometry("400x250")
+        ventana_nombre.configure(bg='white')
         
-        # ========== TÍTULO PRINCIPAL ==========
+        # Hacer que esta ventana esté siempre al frente
+        ventana_nombre.grab_set()
+        
+        # Título de bienvenida
+        titulo = tk.Label(
+            ventana_nombre,
+            text="🍽️ Bienvenido al Restaurante",
+            font=("Arial", 16, "bold"),
+            bg='white',
+            fg='#333333'
+        )
+        titulo.pack(pady=30)
+        
+        # Texto que dice "Por favor ingresa tu nombre"
+        instruccion = tk.Label(
+            ventana_nombre,
+            text="Por favor, ingresa tu nombre:",
+            font=("Arial", 12),
+            bg='white'
+        )
+        instruccion.pack(pady=10)
+        
+        # Caja de texto donde el usuario escribe su nombre
+        self.entrada_nombre = tk.Entry(
+            ventana_nombre,
+            font=("Arial", 14),
+            width=25,
+            justify='center'
+        )
+        self.entrada_nombre.pack(pady=10)
+        self.entrada_nombre.focus()  # El cursor aparece aquí automáticamente
+        
+        # Botón para confirmar
+        boton_confirmar = tk.Button(
+            ventana_nombre,
+            text="Continuar",
+            command=lambda: self.guardar_nombre(ventana_nombre),
+            bg='#4CAF50',
+            fg='white',
+            font=("Arial", 12, "bold"),
+            width=15,
+            cursor='hand2'
+        )
+        boton_confirmar.pack(pady=20)
+        
+        # Permitir presionar Enter para continuar
+        self.entrada_nombre.bind('<Return>', lambda e: self.guardar_nombre(ventana_nombre))
+    
+    
+    def guardar_nombre(self, ventana):
+        """
+        Guarda el nombre que escribió el usuario y cierra la ventana de bienvenida.
+        """
+        nombre = self.entrada_nombre.get()  # Obtener el texto escrito
+        
+        # Verificar que el usuario escribió algo
+        if nombre.strip() == "":  # strip() quita espacios en blanco
+            messagebox.showwarning("Error", "Por favor escribe tu nombre")
+            return
+        
+        # Guardar el nombre
+        self.nombre_cliente = nombre.strip()
+        
+        # Cerrar la ventana de nombre
+        ventana.destroy()
+        
+        # Ahora sí, crear el menú principal
+        self.crear_menu()
+    
+    
+    def crear_menu(self):
+        """
+        Esta función crea todo el menú principal del restaurante.
+        """
+        # ========== TÍTULO CON NOMBRE DEL CLIENTE ==========
         titulo = tk.Label(
             self.root,
-            text="🍽️ Menú Digital",
-            font=("Helvetica", 24, "bold"),
-            bg='#f5f5f5',
-            fg='#2c3e50'
+            text=f"🍽️ Menú Digital - Cliente: {self.nombre_cliente}",
+            font=("Arial", 18, "bold"),
+            bg='#f0f0f0',
+            fg='#333333'
         )
         titulo.pack(pady=20)
         
-        # ========== NOTEBOOK (PESTAÑAS) ==========
-        # ttk.Notebook crea un contenedor con pestañas
-        self.notebook = ttk.Notebook(self.root)
-        self.notebook.pack(fill='both', expand=True, padx=20, pady=10)
+        # ========== FRAME PARA EL MENÚ (área donde se muestran los productos) ==========
+        # Frame es como una caja contenedora
+        frame_menu = tk.Frame(self.root, bg='white')
+        frame_menu.pack(fill='both', expand=True, padx=20, pady=10)
         
-        # Crear una pestaña por cada categoría
-        for categoria in menu["productos"].keys():
-            self.crear_pestaña(categoria)
+        # Crear Canvas (área con scroll) para ver todos los productos
+        canvas = tk.Canvas(frame_menu, bg='white')
+        scrollbar = tk.Scrollbar(frame_menu, orient="vertical", command=canvas.yview)
         
-        # ========== PANEL INFERIOR (PEDIDO Y TOTAL) ==========
-        panel_inferior = tk.Frame(self.root, bg='#ecf0f1', relief='raised', bd=2)
-        panel_inferior.pack(fill='x', padx=20, pady=10)
+        # Frame que va dentro del canvas
+        self.frame_productos = tk.Frame(canvas, bg='white')
         
-        # Botón para ver el pedido
-        btn_ver_pedido = tk.Button(
-            panel_inferior,
-            text="📋 Ver Pedido Actual",
-            command=self.mostrar_pedido,
-            bg='#3498db',
-            fg='white',
-            font=("Helvetica", 12, "bold"),
-            padx=20,
-            pady=10,
-            cursor='hand2'
-        )
-        btn_ver_pedido.pack(side='left', padx=10, pady=10)
-        
-        # Botón para calcular total
-        btn_calcular = tk.Button(
-            panel_inferior,
-            text="💰 Calcular Total",
-            command=self.calcular_y_mostrar,
-            bg='#27ae60',
-            fg='white',
-            font=("Helvetica", 12, "bold"),
-            padx=20,
-            pady=10,
-            cursor='hand2'
-        )
-        btn_calcular.pack(side='left', padx=10, pady=10)
-        
-        # Botón para limpiar pedido
-        btn_limpiar = tk.Button(
-            panel_inferior,
-            text="🗑️ Limpiar Pedido",
-            command=self.limpiar_pedido,
-            bg='#e74c3c',
-            fg='white',
-            font=("Helvetica", 12, "bold"),
-            padx=20,
-            pady=10,
-            cursor='hand2'
-        )
-        btn_limpiar.pack(side='left', padx=10, pady=10)
-    
-    def crear_pestaña(self, categoria):
-        """
-        Crea una pestaña para cada categoría del menú.
-        
-        Args:
-            categoria (str): Nombre de la categoría ("bebidas", "desayunos", etc.)
-        """
-        # Frame = contenedor rectangular
-        frame = tk.Frame(self.notebook, bg='white')
-        self.notebook.add(frame, text=f"  {categoria.upper()}  ")
-        
-        # Canvas + Scrollbar para que se pueda hacer scroll
-        canvas = tk.Canvas(frame, bg='white')
-        scrollbar = ttk.Scrollbar(frame, orient="vertical", command=canvas.yview)
-        frame_scrollable = tk.Frame(canvas, bg='white')
-        
-        frame_scrollable.bind(
+        # Configurar el scroll
+        self.frame_productos.bind(
             "<Configure>",
             lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
         )
         
-        canvas.create_window((0, 0), window=frame_scrollable, anchor="nw")
+        canvas.create_window((0, 0), window=self.frame_productos, anchor="nw")
         canvas.configure(yscrollcommand=scrollbar.set)
         
+        # Colocar canvas y scrollbar
         canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
         
-        # Recorrer todos los productos de esta categoría
-        for producto in menu["productos"][categoria]:
-            self.crear_tarjeta_producto(frame_scrollable, categoria, producto)
-    
-    def crear_tarjeta_producto(self, parent, categoria, producto):
-        """
-        Crea una tarjeta visual para cada producto.
+        # ========== MOSTRAR TODOS LOS PRODUCTOS ==========
+        self.mostrar_productos()
         
-        Args:
-            parent: El contenedor donde se colocará la tarjeta
-            categoria (str): Categoría del producto
-            producto (dict): Diccionario con nombre, descripción y precio
-        """
-        # Frame de la tarjeta con bordes
-        tarjeta = tk.Frame(
-            parent,
-            bg='#ffffff',
-            relief='ridge',
-            bd=2,
-            highlightbackground='#bdc3c7',
-            highlightthickness=1
+        # ========== BOTONES INFERIORES ==========
+        frame_botones = tk.Frame(self.root, bg='#e0e0e0')
+        frame_botones.pack(fill='x', padx=20, pady=15)
+        
+        # Botón: Ver mi pedido
+        boton_ver = tk.Button(
+            frame_botones,
+            text="📋 Ver Mi Pedido",
+            command=self.ver_pedido,
+            bg='#2196F3',
+            fg='white',
+            font=("Arial", 11, "bold"),
+            width=18,
+            height=2,
+            cursor='hand2'
         )
-        tarjeta.pack(fill='x', padx=15, pady=10)
+        boton_ver.pack(side='left', padx=5)
         
-        # Nombre del producto
-        nombre = tk.Label(
+        # Botón: Calcular Total
+        boton_calcular = tk.Button(
+            frame_botones,
+            text="💰 Calcular Total",
+            command=self.calcular_total,
+            bg='#4CAF50',
+            fg='white',
+            font=("Arial", 11, "bold"),
+            width=18,
+            height=2,
+            cursor='hand2'
+        )
+        boton_calcular.pack(side='left', padx=5)
+        
+        # Botón: Limpiar Pedido
+        boton_limpiar = tk.Button(
+            frame_botones,
+            text="🗑️ Limpiar Pedido",
+            command=self.limpiar_pedido,
+            bg='#f44336',
+            fg='white',
+            font=("Arial", 11, "bold"),
+            width=18,
+            height=2,
+            cursor='hand2'
+        )
+        boton_limpiar.pack(side='left', padx=5)
+    
+    
+    def mostrar_productos(self):
+        """
+        Esta función muestra todos los productos del menú organizados por categoría.
+        """
+        # Recorrer cada categoría (bebidas, desayunos, almuerzos, acompañantes)
+        for categoria in menu["productos"]:
+            
+            # ===== TÍTULO DE LA CATEGORÍA =====
+            titulo_categoria = tk.Label(
+                self.frame_productos,
+                text=f"═══ {categoria.upper()} ═══",
+                font=("Arial", 14, "bold"),
+                bg='white',
+                fg='#1976D2'
+            )
+            titulo_categoria.pack(pady=(20, 10))
+            
+            # Recorrer cada producto dentro de esta categoría
+            for producto in menu["productos"][categoria]:
+                self.crear_tarjeta(categoria, producto)
+    
+    
+    def crear_tarjeta(self, categoria, producto):
+        """
+        Crea una tarjeta bonita para cada producto.
+        
+        Parámetros:
+        - categoria: nombre de la categoría (ej: "bebidas")
+        - producto: diccionario con nombre, descripción y precio
+        """
+        # Frame = caja contenedora para cada producto
+        tarjeta = tk.Frame(
+            self.frame_productos,
+            bg='#fafafa',
+            relief='solid',
+            bd=1
+        )
+        tarjeta.pack(fill='x', padx=15, pady=8)
+        
+        # ===== NOMBRE DEL PRODUCTO =====
+        nombre_label = tk.Label(
             tarjeta,
             text=producto["nombre"],
-            font=("Helvetica", 14, "bold"),
-            bg='white',
-            fg='#2c3e50',
+            font=("Arial", 12, "bold"),
+            bg='#fafafa',
+            fg='#212121',
             anchor='w'
         )
-        nombre.pack(fill='x', padx=10, pady=(10, 5))
+        nombre_label.pack(fill='x', padx=10, pady=(8, 2))
         
-        # Descripción
-        descripcion = tk.Label(
+        # ===== DESCRIPCIÓN =====
+        descripcion_label = tk.Label(
             tarjeta,
             text=producto["descripcion"],
-            font=("Helvetica", 10),
-            bg='white',
-            fg='#7f8c8d',
+            font=("Arial", 9),
+            bg='#fafafa',
+            fg='#666666',
             anchor='w',
-            wraplength=600,  # Ajusta el texto si es muy largo
+            wraplength=500,
             justify='left'
         )
-        descripcion.pack(fill='x', padx=10, pady=5)
+        descripcion_label.pack(fill='x', padx=10, pady=2)
         
-        # Frame inferior con precio y botón
-        frame_inferior = tk.Frame(tarjeta, bg='white')
-        frame_inferior.pack(fill='x', padx=10, pady=10)
+        # ===== FRAME PARA PRECIO Y BOTÓN =====
+        frame_abajo = tk.Frame(tarjeta, bg='#fafafa')
+        frame_abajo.pack(fill='x', padx=10, pady=(5, 8))
         
         # Precio
         precio_label = tk.Label(
-            frame_inferior,
+            frame_abajo,
             text=f"${producto['precio']:.2f}",
-            font=("Helvetica", 16, "bold"),
-            bg='white',
-            fg='#27ae60'
+            font=("Arial", 14, "bold"),
+            bg='#fafafa',
+            fg='#4CAF50'
         )
         precio_label.pack(side='left')
         
-        # Botón para agregar al pedido
-        # lambda: función anónima que se ejecuta al hacer clic
-        btn_agregar = tk.Button(
-            frame_inferior,
-            text="➕ Agregar",
-            command=lambda: self.agregar_producto(categoria, producto["nombre"]),
-            bg='#3498db',
+        # Botón "Agregar"
+        # lambda es una función pequeña que se ejecuta al hacer clic
+        boton_agregar = tk.Button(
+            frame_abajo,
+            text="+ Agregar",
+            command=lambda: self.agregar_al_pedido(categoria, producto["nombre"]),
+            bg='#2196F3',
             fg='white',
-            font=("Helvetica", 10, "bold"),
-            padx=15,
-            pady=5,
-            cursor='hand2'
+            font=("Arial", 9, "bold"),
+            cursor='hand2',
+            width=12
         )
-        btn_agregar.pack(side='right')
+        boton_agregar.pack(side='right')
     
-    def agregar_producto(self, categoria, nombre_producto):
+    
+    def agregar_al_pedido(self, categoria, nombre_producto):
         """
-        Agrega un producto al pedido actual.
+        Agrega un producto a la lista del pedido.
         
-        Args:
-            categoria (str): Categoría del producto
-            nombre_producto (str): Nombre del producto
+        Parámetros:
+        - categoria: la categoría del producto (ej: "bebidas")
+        - nombre_producto: el nombre del producto (ej: "Café Americano")
         """
+        # Agregar el producto a la lista
         self.pedido[categoria].append(nombre_producto)
+        
+        # Mostrar mensaje de confirmación
         messagebox.showinfo(
-            "✅ Producto Agregado",
-            f"'{nombre_producto}' agregado al pedido"
+            "Producto Agregado",
+            f"✅ '{nombre_producto}' agregado a tu pedido"
         )
     
-    def mostrar_pedido(self):
-        """Muestra el pedido actual en una ventana emergente"""
-        if not any(self.pedido.values()):  # Si el pedido está vacío
-            messagebox.showwarning("Pedido Vacío", "No has agregado ningún producto")
+    
+    def ver_pedido(self):
+        """
+        Muestra una ventana con todos los productos que el cliente ha pedido.
+        """
+        # Verificar si hay productos en el pedido
+        tiene_productos = False
+        for productos in self.pedido.values():
+            if len(productos) > 0:
+                tiene_productos = True
+                break
+        
+        if not tiene_productos:
+            messagebox.showwarning(
+                "Pedido Vacío",
+                "Aún no has agregado ningún producto"
+            )
             return
         
-        # Crear ventana nueva
+        # ===== CREAR VENTANA NUEVA =====
         ventana = tk.Toplevel(self.root)
-        ventana.title("📋 Pedido Actual")
-        ventana.geometry("500x600")
+        ventana.title("Mi Pedido")
+        ventana.geometry("500x550")
         ventana.configure(bg='white')
         
         # Título
-        tk.Label(
+        titulo = tk.Label(
             ventana,
-            text="Tu Pedido",
-            font=("Helvetica", 18, "bold"),
-            bg='white'
-        ).pack(pady=20)
+            text=f"📋 Pedido de {self.nombre_cliente}",
+            font=("Arial", 16, "bold"),
+            bg='white',
+            fg='#333333'
+        )
+        titulo.pack(pady=20)
         
-        # Text widget con scrollbar
+        # ===== ÁREA DE TEXTO CON SCROLL =====
         frame_texto = tk.Frame(ventana, bg='white')
         frame_texto.pack(fill='both', expand=True, padx=20, pady=10)
         
-        scrollbar = ttk.Scrollbar(frame_texto)
+        scrollbar = tk.Scrollbar(frame_texto)
         scrollbar.pack(side='right', fill='y')
         
         texto = tk.Text(
             frame_texto,
-            font=("Courier", 11),
-            bg='#f8f9fa',
+            font=("Courier", 10),
+            bg='#f9f9f9',
             yscrollcommand=scrollbar.set,
-            wrap='word'
+            wrap='word',
+            height=20
         )
         texto.pack(side='left', fill='both', expand=True)
         scrollbar.config(command=texto.yview)
         
-        # Llenar el texto con los productos
-        for categoria, productos in self.pedido.items():
-            if productos:
-                texto.insert('end', f"\n{'='*40}\n")
-                texto.insert('end', f"  {categoria.upper()}\n")
-                texto.insert('end', f"{'='*40}\n")
-                for i, prod in enumerate(productos, 1):
-                    precio = selector_de_precios(categoria, prod)
-                    texto.insert('end', f"{i}. {prod} - ${precio:.2f}\n")
+        # ===== LLENAR CON LOS PRODUCTOS =====
+        subtotal = 0
         
-        texto.config(state='disabled')  # Solo lectura
+        for categoria in self.pedido:
+            productos = self.pedido[categoria]
+            
+            if len(productos) > 0:  # Si hay productos en esta categoría
+                # Escribir el título de la categoría
+                texto.insert('end', f"\n{'='*45}\n")
+                texto.insert('end', f"  {categoria.upper()}\n")
+                texto.insert('end', f"{'='*45}\n")
+                
+                # Escribir cada producto
+                contador = 1
+                for prod in productos:
+                    precio = selector_de_precios(categoria, prod)
+                    texto.insert('end', f"{contador}. {prod}\n")
+                    texto.insert('end', f"   Precio: ${precio:.2f}\n\n")
+                    subtotal = subtotal + precio
+                    contador = contador + 1
+        
+        # ===== MOSTRAR SUBTOTAL =====
+        texto.insert('end', f"\n{'='*45}\n")
+        texto.insert('end', f"SUBTOTAL: ${subtotal:.2f}\n")
+        texto.insert('end', f"{'='*45}\n")
+        
+        # Hacer que no se pueda editar el texto
+        texto.config(state='disabled')
+        
+        # Botón para cerrar
+        boton_cerrar = tk.Button(
+            ventana,
+            text="Cerrar",
+            command=ventana.destroy,
+            bg='#757575',
+            fg='white',
+            font=("Arial", 10, "bold"),
+            width=15
+        )
+        boton_cerrar.pack(pady=15)
     
-    def calcular_y_mostrar(self):
-        """Calcula el total del pedido y lo muestra"""
-        if not any(self.pedido.values()):
-            messagebox.showwarning("Pedido Vacío", "No has agregado ningún producto")
+    
+    def calcular_total(self):
+        """
+        Calcula el total del pedido (con IVA y servicio) y lo muestra.
+        """
+        # Verificar que haya productos
+        tiene_productos = False
+        for productos in self.pedido.values():
+            if len(productos) > 0:
+                tiene_productos = True
+                break
+        
+        if not tiene_productos:
+            messagebox.showwarning(
+                "Pedido Vacío",
+                "Debes agregar productos primero"
+            )
             return
         
-        total = self.calcular_total()
+        # ===== CALCULAR SUBTOTAL =====
+        subtotal = 0
+        for categoria in self.pedido:
+            for producto in self.pedido[categoria]:
+                precio = selector_de_precios(categoria, producto)
+                subtotal = subtotal + precio
         
-        # Ventana de resultado
+        # ===== CALCULAR IVA Y SERVICIO =====
+        iva = subtotal * 0.16  # 16% de IVA
+        servicio = subtotal * 0.10  # 10% de servicio
+        total = subtotal + iva + servicio
+        
+        # ===== CREAR VENTANA DE RESULTADO =====
         ventana = tk.Toplevel(self.root)
-        ventana.title("💰 Total del Pedido")
-        ventana.geometry("400x300")
-        ventana.configure(bg='#2c3e50')
+        ventana.title("Total a Pagar")
+        ventana.geometry("450x400")
+        ventana.configure(bg='#263238')
         
+        # Título
         tk.Label(
             ventana,
-            text="Total a Pagar",
-            font=("Helvetica", 20, "bold"),
-            bg='#2c3e50',
+            text=f"Cliente: {self.nombre_cliente}",
+            font=("Arial", 14, "bold"),
+            bg='#263238',
+            fg='#B0BEC5'
+        ).pack(pady=(20, 10))
+        
+        # Línea separadora
+        tk.Label(
+            ventana,
+            text="─" * 40,
+            bg='#263238',
+            fg='#546E7A'
+        ).pack()
+        
+        # Subtotal
+        tk.Label(
+            ventana,
+            text=f"Subtotal: ${subtotal:.2f}",
+            font=("Arial", 12),
+            bg='#263238',
             fg='white'
-        ).pack(pady=30)
+        ).pack(pady=10)
+        
+        # IVA
+        tk.Label(
+            ventana,
+            text=f"IVA (16%): ${iva:.2f}",
+            font=("Arial", 12),
+            bg='#263238',
+            fg='white'
+        ).pack(pady=5)
+        
+        # Servicio
+        tk.Label(
+            ventana,
+            text=f"Servicio (10%): ${servicio:.2f}",
+            font=("Arial", 12),
+            bg='#263238',
+            fg='white'
+        ).pack(pady=5)
+        
+        # Línea separadora
+        tk.Label(
+            ventana,
+            text="─" * 40,
+            bg='#263238',
+            fg='#546E7A'
+        ).pack(pady=10)
+        
+        # TOTAL GRANDE
+        tk.Label(
+            ventana,
+            text="TOTAL A PAGAR",
+            font=("Arial", 14, "bold"),
+            bg='#263238',
+            fg='#B0BEC5'
+        ).pack(pady=5)
         
         tk.Label(
             ventana,
             text=f"${total:.2f}",
-            font=("Helvetica", 48, "bold"),
-            bg='#2c3e50',
-            fg='#2ecc71'
-        ).pack(pady=20)
+            font=("Arial", 36, "bold"),
+            bg='#263238',
+            fg='#4CAF50'
+        ).pack(pady=10)
         
-        tk.Label(
+        # Botón cerrar
+        tk.Button(
             ventana,
-            text="(IVA 16% y Servicio 10% incluidos)",
-            font=("Helvetica", 10),
-            bg='#2c3e50',
-            fg='#95a5a6'
-        ).pack()
+            text="Cerrar",
+            command=ventana.destroy,
+            bg='#546E7A',
+            fg='white',
+            font=("Arial", 11, "bold"),
+            width=15
+        ).pack(pady=20)
     
-    def calcular_total(self):
-        """
-        Calcula el total del pedido con IVA y servicio.
-        (Copiado de tu código original)
-        """
-        subtotal = 0.0
-        for categoria, productos in self.pedido.items():
-            for producto in productos:
-                precio = selector_de_precios(categoria, producto)
-                if isinstance(precio, (int, float)):
-                    subtotal += precio
-        
-        IVA = 0.16
-        SERVICIO = 0.10
-        total = subtotal * (1 + IVA + SERVICIO)
-        return total
     
     def limpiar_pedido(self):
-        """Vacía el pedido actual"""
+        """
+        Borra todos los productos del pedido actual.
+        """
+        # Preguntar si está seguro
         respuesta = messagebox.askyesno(
             "Confirmar",
-            "¿Estás seguro de limpiar el pedido?"
+            "¿Estás seguro de limpiar todo el pedido?"
         )
-        if respuesta:
-            for categoria in self.pedido:
-                self.pedido[categoria] = []
-            messagebox.showinfo("✅ Listo", "Pedido limpiado")
+        
+        if respuesta:  # Si hizo clic en "Sí"
+            # Vaciar todas las listas
+            self.pedido["bebidas"] = []
+            self.pedido["desayunos"] = []
+            self.pedido["almuerzos"] = []
+            self.pedido["acompanantes"] = []
+            
+            messagebox.showinfo("Listo", "✅ Pedido limpiado correctamente")
 
 
-# ========== EJECUCIÓN DEL PROGRAMA ==========
+# ========== AQUÍ EMPIEZA EL PROGRAMA ==========
 if __name__ == "__main__":
-    root = tk.Tk()  # Crear ventana principal
-    app = RestauranteApp(root)  # Crear la aplicación
-    root.mainloop()  # Mantener la ventana abierta
+    # Crear la ventana principal
+    ventana_principal = tk.Tk()
+    
+    # Crear la aplicación
+    app = RestauranteApp(ventana_principal)
+    
+    # Mantener la ventana abierta (ciclo infinito hasta que se cierre)
+    ventana_principal.mainloop()
